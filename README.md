@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PlanRescue
 
-## Getting Started
+틀어진 하루 계획을 KEEP·REDUCE·POSTPONE·DROP으로 재조정하는 개인용 일정 복구 웹앱.
 
-First, run the development server:
+## 1. 제품 목적과 판단 기준
+이미 세운 계획이 틀어졌을 때, 남은 시간 안에서 실행 가능한 계획으로 복구하는 서비스입니다. 핵심 판단은 다음 네 가지입니다.
+- **KEEP (유지)**: 원래 범위 그대로 오늘 수행합니다.
+- **REDUCE (축소)**: 구체적인 최소 성공 범위로 줄여 오늘 수행합니다.
+- **POSTPONE (연기)**: 후속 실행을 위해 미룬 일 목록으로 이동합니다.
+- **DROP (제외)**: 오늘 계획에서 제외합니다 (업무 원본 삭제나 전체 취소가 아님).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 2. 설치 및 실행 명령
+- **필요한 Node 버전**: Node.js 18 이상 권장
+- **설치**:
+  ```bash
+  npm install
+  ```
+- **개발 서버 실행**:
+  ```bash
+  npm run dev
+  ```
+- **프로덕션 빌드 및 실행**:
+  ```bash
+  npm run build
+  npm run start
+  ```
+
+## 3. 환경 변수와 AI(Gemini) 연동
+AI 기능(최소 범위 제안)을 사용하려면 루트 디렉토리에 `.env.local` 파일을 만들고 아래 변수를 설정하세요.
 ```
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.5-flash
+```
+**API 키 없이 실행하는 방법**:
+`.env.local`을 설정하지 않거나 `GEMINI_API_KEY`가 없어도 기본 앱 기능과 수동 스케줄링 로직은 완벽히 동작합니다. AI 버튼을 누를 때만 "네트워크 오류" 혹은 "AI 제안 실패" 메시지가 표시되며 기존 계획은 유지됩니다.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 4. 데이터 저장 및 백업 방식
+- **로컬 저장**: 모든 데이터는 브라우저의 `IndexedDB` (Dexie.js)에 로컬로 저장됩니다. 브라우저 캐시 삭제 시 데이터가 소실될 수 있습니다.
+- **백업/복원**: 계획 복구 후 로컬 저장소에 백업되며, 현재는 도메인 로직(src/lib/storage/backup.ts)으로 구현되어 있습니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 5. 핵심 정책 및 조건 처리
+- **연속 작업만 지원**: MVP에서는 작업 분할을 지원하지 않고 하나의 연속 구간에만 업무를 배치합니다.
+- **우선순위 정책**: 중요도, 마감 기한, 타인에 대한 영향을 가중치로 평가하여 배치합니다. 동점 시 빠른 마감, 짧은 소요시간 순으로 처리합니다.
+- **마감·축소·충돌 처리**: 
+  - '오늘 필수'로 지정된 일은 최대한 보호하며 임의로 축소하거나 제외하지 않습니다. 
+  - 시간과 예산이 부족할 경우에 한해 '오늘 필수'라도 사용자 승인 하에 축소(REDUCE)됩니다.
+  - 시간 충돌이 있거나 불가능한 조건인 경우 충돌 상태를 사용자에게 명시하고 강제 선택을 유지합니다.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 6. 테스트 명령과 제한 사항
+- **단위 테스트 (Vitest)**:
+  ```bash
+  npm run test
+  ```
+- **타입 검사**:
+  ```bash
+  npm run typecheck
+  ```
+- **확인된 제한 사항**:
+  - 이번 버전(MVP)에서는 로그인 및 클라우드 데이터 동기화가 제공되지 않습니다.
+  - 모바일 해상도를 지원하지만, 데스크톱 UI에서 화면 분할을 통해 가장 쾌적하게 사용할 수 있습니다.
+  - 백업/복원은 핵심 로직으로 구현되어 있으며, 브라우저 스토리지의 한계상 영구 보관은 사용자 로컬에서 JSON으로 백업받아야 합니다.
