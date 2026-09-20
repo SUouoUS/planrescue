@@ -2,8 +2,6 @@
 
 import React, { useState } from 'react';
 import { Task, TaskDecision, UserOverride } from '@/domain/types';
-import { Card, CardContent } from './ui/card';
-import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { formatDuration } from '@/domain/time-calc';
 
@@ -26,29 +24,35 @@ interface AiSuggestion {
   error?: string;
 }
 
+const ACTION_STYLES: Record<string, { label: string; labelClass: string; borderClass: string }> = {
+  KEEP: {
+    label: '그대로',
+    labelClass: 'text-[var(--status-keep)] bg-[var(--status-keep-bg)]',
+    borderClass: 'border-l-[var(--status-keep)]',
+  },
+  REDUCE: {
+    label: '범위 축소',
+    labelClass: 'text-[var(--status-reduce)] bg-[var(--status-reduce-bg)]',
+    borderClass: 'border-l-[var(--status-reduce)]',
+  },
+  POSTPONE: {
+    label: '미루기',
+    labelClass: 'text-[var(--status-postpone)] bg-[var(--status-postpone-bg)]',
+    borderClass: 'border-l-[var(--status-postpone)]',
+  },
+  DROP: {
+    label: '오늘 제외',
+    labelClass: 'text-[var(--status-drop)] bg-[var(--status-drop-bg)]',
+    borderClass: 'border-l-[var(--status-drop)]',
+  },
+};
+
 export function TaskCard({ task, decision, userOverride, isMustToday, onOverrideChange, onEdit, onComplete }: TaskCardProps) {
   const [loadingAi, setLoadingAi] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
-  const getActionColor = (action: string | null | undefined) => {
-    switch (action) {
-      case 'KEEP': return 'bg-green-100 text-green-800 border-green-200';
-      case 'REDUCE': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'POSTPONE': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'DROP': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getActionLabel = (action: string | null | undefined) => {
-    switch (action) {
-      case 'KEEP': return '그대로 (KEEP)';
-      case 'REDUCE': return '범위 축소 (REDUCE)';
-      case 'POSTPONE': return '미루기 (POSTPONE)';
-      case 'DROP': return '오늘 제외 (DROP)';
-      default: return '대기';
-    }
-  };
+  const actionStyle = decision?.action ? ACTION_STYLES[decision.action] : null;
 
   const handleAiSuggest = async () => {
     setLoadingAi(true);
@@ -71,7 +75,7 @@ export function TaskCard({ task, decision, userOverride, isMustToday, onOverride
       } else {
         alert(data.error || 'AI 제안 실패');
       }
-    } catch (e) {
+    } catch {
       alert('네트워크 오류가 발생했습니다.');
     } finally {
       setLoadingAi(false);
@@ -79,94 +83,150 @@ export function TaskCard({ task, decision, userOverride, isMustToday, onOverride
   };
 
   return (
-    <Card className="mb-3 overflow-hidden">
-      <div className={`h-1.5 w-full ${getActionColor(decision?.action).split(' ')[0]}`} />
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h4 className="font-semibold">{task.title}</h4>
-              {isMustToday && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">오늘 필수</Badge>}
-              {task.blocked && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-yellow-100 text-yellow-800 border-yellow-200">외부 대기</Badge>}
-            </div>
-            <div className="text-xs text-muted-foreground flex gap-3">
-              <span>예상: {task.estimatedMinutes ? formatDuration(task.estimatedMinutes) : '미정'}</span>
-              {task.deadline && <span>마감: {new Date(task.deadline).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>}
-            </div>
-          </div>
-          
-          <div className="flex gap-1">
-            <Button variant="ghost" size="sm" onClick={onEdit} className="h-7 text-xs px-2">수정</Button>
-            <Button variant="outline" size="sm" onClick={onComplete} className="h-7 text-xs px-2 border-green-200 text-green-700 hover:bg-green-50">완료</Button>
-          </div>
-        </div>
+    <div className="border-b border-border last:border-b-0 py-3 group">
+      {/* Row 1: checkbox, title, must-today label, actions */}
+      <div className="flex items-start gap-3">
+        {/* Complete checkbox */}
+        <button
+          onClick={onComplete}
+          className="mt-0.5 flex-shrink-0 w-[18px] h-[18px] rounded-sm border border-input hover:border-accent transition-colors duration-150 flex items-center justify-center"
+          aria-label={`${task.title} 완료`}
+          title="완료 처리"
+        >
+          {task.status === 'completed' && (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </button>
 
-        {decision && (
-          <div className="mt-3 p-3 bg-muted/50 rounded-md text-sm border">
-            <div className="flex items-center gap-2 font-medium mb-1">
-              <span className={`px-2 py-0.5 rounded text-xs border ${getActionColor(decision.action)}`}>
-                {getActionLabel(decision.action)}
+        {/* Title area */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[15px] font-medium leading-snug break-words">{task.title}</span>
+            {isMustToday && (
+              <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] font-medium rounded bg-[var(--status-error-bg)] text-[var(--status-error)]">
+                오늘 필수
               </span>
-              <span className="text-muted-foreground text-xs">{decision.reasonText}</span>
-            </div>
-            
-            {decision.action === 'REDUCE' && decision.appliedScope && (
-              <div className="mt-2 text-xs bg-background p-2 rounded border border-blue-100">
-                <span className="font-semibold text-blue-700">최소 범위:</span> {decision.appliedScope}
-                <div className="mt-1 opacity-70">
-                  시간 단축: {formatDuration(task.estimatedMinutes!)} → {formatDuration(decision.appliedMinutes!)}
-                </div>
-              </div>
+            )}
+            {task.blocked && (
+              <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] font-medium rounded bg-secondary text-muted-foreground">
+                외부 대기
+              </span>
             )}
           </div>
-        )}
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-3">
-          <span className="text-xs font-medium text-muted-foreground">강제 지정:</span>
-          <select 
-            className="text-xs border rounded p-1"
-            value={userOverride}
-            onChange={e => onOverrideChange(e.target.value as UserOverride)}
-          >
-            <option value="AUTO">자동 (AUTO)</option>
-            <option value="KEEP">그대로 (KEEP)</option>
-            <option value="REDUCE">범위 축소 (REDUCE)</option>
-            <option value="POSTPONE">미루기 (POSTPONE)</option>
-            <option value="DROP">오늘 제외 (DROP)</option>
-          </select>
-          
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            className="h-7 text-xs ml-auto"
-            onClick={handleAiSuggest}
-            disabled={loadingAi}
-          >
-            {loadingAi ? '생성 중...' : '✨ 최소 범위 제안받기'}
-          </Button>
+          {/* Row 2: metadata */}
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            {task.estimatedMinutes && (
+              <span className="tabular-nums">{formatDuration(task.estimatedMinutes)}</span>
+            )}
+            {task.deadline && (
+              <span className="tabular-nums">
+                마감 {new Date(task.deadline).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+            {task.importance !== 'medium' && (
+              <span>중요도 {task.importance === 'high' ? '높음' : '낮음'}</span>
+            )}
+          </div>
         </div>
 
-        {aiSuggestion && (
-          <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-md text-sm">
-            {aiSuggestion.needsClarification ? (
-              <div>
-                <p className="font-medium text-blue-800">정보가 부족합니다.</p>
-                <p className="text-blue-700 text-xs mt-1">{aiSuggestion.question}</p>
-              </div>
-            ) : (
-              <div>
-                <p className="font-medium text-blue-800">AI 제안 최소 범위</p>
-                <p className="text-xs mt-1 text-blue-900">{aiSuggestion.suggestedScope}</p>
-                <p className="text-[10px] mt-1 text-blue-700">이유: {aiSuggestion.rationale}</p>
-                <p className="text-[10px] text-blue-700">완료 기준: {aiSuggestion.doneCriteria}</p>
-                <Button variant="outline" size="sm" className="w-full mt-2 h-7 text-xs border-blue-200">
-                  이 제안 채택하기 (작업 수정으로 이동)
-                </Button>
-              </div>
-            )}
+        {/* Actions */}
+        <div className="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150">
+          <button
+            onClick={onEdit}
+            className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors duration-150"
+          >
+            수정
+          </button>
+        </div>
+      </div>
+
+      {/* Decision result (if exists) */}
+      {decision && actionStyle && (
+        <div className="mt-2 ml-[30px]">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`inline-flex items-center px-1.5 py-0.5 text-[11px] font-medium rounded ${actionStyle.labelClass}`}>
+              {actionStyle.label}
+            </span>
+            <span className="text-xs text-muted-foreground">{decision.reasonText}</span>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* REDUCE detail */}
+          {decision.action === 'REDUCE' && decision.appliedScope && (
+            <div className="mt-2 py-2 px-3 rounded-md bg-[var(--status-reduce-bg)] text-sm">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-xs font-medium text-[var(--status-reduce)]">최소 범위</span>
+                <span className="text-[13px] text-foreground">{decision.appliedScope}</span>
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground tabular-nums">
+                {formatDuration(task.estimatedMinutes!)} → {formatDuration(decision.appliedMinutes!)}
+              </div>
+              {task.reduction?.doneCriteria && (
+                <button
+                  onClick={() => setShowDetails(!showDetails)}
+                  className="mt-1 text-xs text-accent hover:text-foreground transition-colors duration-150"
+                >
+                  {showDetails ? '완료 기준 접기' : '완료 기준 보기'}
+                </button>
+              )}
+              {showDetails && task.reduction?.doneCriteria && (
+                <p className="mt-1 text-xs text-muted-foreground">{task.reduction.doneCriteria}</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Override & AI */}
+      <div className="mt-2 ml-[30px] flex flex-wrap items-center gap-2">
+        <label htmlFor={`override-${task.id}`} className="text-xs text-muted-foreground">강제 지정</label>
+        <select
+          id={`override-${task.id}`}
+          className="text-xs border border-input bg-background rounded-md px-2 py-1 h-7 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-150"
+          value={userOverride}
+          onChange={e => onOverrideChange(e.target.value as UserOverride)}
+        >
+          <option value="AUTO">자동</option>
+          <option value="KEEP">그대로</option>
+          <option value="REDUCE">범위 축소</option>
+          <option value="POSTPONE">미루기</option>
+          <option value="DROP">오늘 제외</option>
+        </select>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs ml-auto text-muted-foreground hover:text-foreground"
+          onClick={handleAiSuggest}
+          disabled={loadingAi}
+        >
+          {loadingAi ? '생성 중...' : '최소 범위 제안받기'}
+        </Button>
+      </div>
+
+      {/* AI suggestion */}
+      {aiSuggestion && (
+        <div className="mt-2 ml-[30px] p-3 rounded-md bg-secondary text-sm">
+          {aiSuggestion.needsClarification ? (
+            <div>
+              <p className="font-medium text-sm">정보가 부족합니다.</p>
+              <p className="text-xs mt-1 text-muted-foreground">{aiSuggestion.question}</p>
+            </div>
+          ) : (
+            <div>
+              <p className="font-medium text-sm">AI 제안 최소 범위</p>
+              <p className="text-[13px] mt-1">{aiSuggestion.suggestedScope}</p>
+              <p className="text-xs mt-1 text-muted-foreground">이유: {aiSuggestion.rationale}</p>
+              <p className="text-xs text-muted-foreground">완료 기준: {aiSuggestion.doneCriteria}</p>
+              <Button variant="outline" size="sm" className="w-full mt-2 h-8 text-xs">
+                이 제안 채택하기 (작업 수정으로 이동)
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

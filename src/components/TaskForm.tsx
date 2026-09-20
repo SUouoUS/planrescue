@@ -5,7 +5,6 @@ import { Task, TaskSchema, ImportanceLevel, TeamImpact } from '@/domain/types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Card, CardContent } from './ui/card';
 import { generateId } from '@/domain/time-calc';
 
 interface TaskFormProps {
@@ -64,118 +63,129 @@ export function TaskForm({ initialTask, onSave, onCancel }: TaskFormProps) {
   };
 
   return (
-    <Card className="w-full mb-4">
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">할 일 제목 <span className="text-destructive">*</span></Label>
-            <Input 
-              id="title" 
-              value={title} 
-              onChange={e => setTitle(e.target.value)} 
+    <div className="border border-border bg-secondary/40 rounded-lg p-4 mb-2">
+      <form onSubmit={handleSubmit}>
+        {/* Quick entry: title + time side by side */}
+        <div className="flex gap-3 mb-3">
+          <div className="flex-1 space-y-1.5">
+            <Label htmlFor="task-title" className="text-xs text-muted-foreground">
+              할 일 제목 <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="task-title"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
               placeholder="예: 보고서 작성"
+              className="h-10"
+              autoFocus
             />
-            {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
+            {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
           </div>
+          <div className="w-[120px] space-y-1.5">
+            <Label htmlFor="task-minutes" className="text-xs text-muted-foreground">예상 시간 (분)</Label>
+            <Input
+              id="task-minutes"
+              type="number"
+              min="1"
+              value={estimatedMinutes}
+              onChange={e => setEstimatedMinutes(e.target.value)}
+              placeholder="60"
+              className="h-10 tabular-nums"
+            />
+            {errors.estimatedMinutes && <p className="text-xs text-destructive">{errors.estimatedMinutes}</p>}
+          </div>
+          <div className="w-[100px] space-y-1.5">
+            <Label htmlFor="task-importance" className="text-xs text-muted-foreground">중요도</Label>
+            <select
+              id="task-importance"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-150"
+              value={importance}
+              onChange={e => setImportance(e.target.value as ImportanceLevel)}
+            >
+              <option value="low">낮음</option>
+              <option value="medium">보통</option>
+              <option value="high">높음</option>
+            </select>
+          </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="estimatedMinutes">예상 소요시간 (분)</Label>
-              <Input 
-                id="estimatedMinutes" 
-                type="number" 
-                min="1" 
-                value={estimatedMinutes} 
-                onChange={e => setEstimatedMinutes(e.target.value)} 
-                placeholder="60"
+        {/* Expandable details */}
+        {!expanded ? (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-150 mb-3"
+          >
+            + 상세 정보 (마감, 대기 상태 등)
+          </button>
+        ) : (
+          <div className="space-y-3 pt-3 border-t border-border mb-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="task-deadline" className="text-xs text-muted-foreground">마감 일시 (선택)</Label>
+              <Input
+                id="task-deadline"
+                type="datetime-local"
+                value={deadline}
+                onChange={e => setDeadline(e.target.value)}
+                className="h-10"
               />
-              {errors.estimatedMinutes && <p className="text-sm text-destructive">{errors.estimatedMinutes}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="importance">중요도</Label>
-              <select 
-                id="importance"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={importance}
-                onChange={e => setImportance(e.target.value as ImportanceLevel)}
-              >
-                <option value="low">낮음</option>
-                <option value="medium">보통</option>
-                <option value="high">높음</option>
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="task-team" className="text-xs text-muted-foreground">팀 영향도</Label>
+                <select
+                  id="task-team"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-2 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-150"
+                  value={teamImpact}
+                  onChange={e => setTeamImpact(e.target.value as TeamImpact)}
+                >
+                  <option value="none">없음</option>
+                  <option value="low">낮음</option>
+                  <option value="high">높음</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="task-blocked"
+                  checked={blocked}
+                  onChange={e => setBlocked(e.target.checked)}
+                  className="rounded border-input"
+                />
+                <Label htmlFor="task-blocked" className="text-sm">외부 답변/결과 대기 중</Label>
+              </div>
+              {blocked && (
+                <Input
+                  value={blockedReason}
+                  onChange={e => setBlockedReason(e.target.value)}
+                  placeholder="대기 사유 (예: 디자인팀 에셋 전달 대기)"
+                  className="h-10"
+                />
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="task-notes" className="text-xs text-muted-foreground">메모</Label>
+              <Input
+                id="task-notes"
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="추가 정보"
+                className="h-10"
+              />
             </div>
           </div>
+        )}
 
-          {!expanded ? (
-            <Button type="button" variant="ghost" size="sm" onClick={() => setExpanded(true)} className="w-full text-muted-foreground">
-              + 상세 정보 입력 (마감, 대기 상태 등)
-            </Button>
-          ) : (
-            <div className="space-y-4 pt-4 border-t">
-              <div className="space-y-2">
-                <Label htmlFor="deadline">마감 일시 (선택)</Label>
-                <Input 
-                  id="deadline" 
-                  type="datetime-local" 
-                  value={deadline} 
-                  onChange={e => setDeadline(e.target.value)} 
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="teamImpact">팀 영향도</Label>
-                  <select 
-                    id="teamImpact"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={teamImpact}
-                    onChange={e => setTeamImpact(e.target.value as TeamImpact)}
-                  >
-                    <option value="none">없음</option>
-                    <option value="low">낮음</option>
-                    <option value="high">높음</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="checkbox" 
-                    id="blocked" 
-                    checked={blocked} 
-                    onChange={e => setBlocked(e.target.checked)} 
-                  />
-                  <Label htmlFor="blocked">외부 답변/결과 대기 중</Label>
-                </div>
-                {blocked && (
-                  <Input 
-                    value={blockedReason} 
-                    onChange={e => setBlockedReason(e.target.value)} 
-                    placeholder="대기 사유 (예: 디자인팀 에셋 전달 대기)"
-                  />
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">메모</Label>
-                <Input 
-                  id="notes" 
-                  value={notes} 
-                  onChange={e => setNotes(e.target.value)} 
-                  placeholder="추가 정보"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onCancel}>취소</Button>
-            <Button type="submit">저장</Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" size="sm" onClick={onCancel} className="h-9">취소</Button>
+          <Button type="submit" size="sm" className="h-9">저장</Button>
+        </div>
+      </form>
+    </div>
   );
 }

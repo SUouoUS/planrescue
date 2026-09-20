@@ -2,9 +2,7 @@
 
 import React from 'react';
 import { PlanResult } from '@/domain/types';
-import { Card, CardContent } from './ui/card';
 import { formatDuration } from '@/domain/time-calc';
-import { Badge } from './ui/badge';
 
 interface PlanResultPanelProps {
   result: PlanResult | null;
@@ -14,47 +12,40 @@ export function PlanResultPanel({ result }: PlanResultPanelProps) {
   if (!result) return null;
 
   return (
-    <Card className="mb-4 bg-primary/5 border-primary/20">
-      <CardContent className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-semibold text-lg text-primary">복구된 계획 요약</h3>
-          {result.isPreview && (
-            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
-              미리보기 (저장 안 됨)
-            </Badge>
-          )}
-        </div>
-
-        {result.warnings.length > 0 && (
-          <div className="mb-4 space-y-2">
-            {result.warnings.map((w, idx) => (
-              <div key={idx} className="p-2 text-sm bg-red-50 border border-red-200 text-red-800 rounded flex gap-2">
-                <span className="font-bold">!</span>
-                {w.message}
-              </div>
-            ))}
-          </div>
+    <div className="border border-border bg-card rounded-lg p-4 mb-4">
+      <div className="flex justify-between items-start mb-3">
+        <h3 className="text-sm font-medium">복구 결과 요약</h3>
+        {result.isPreview && (
+          <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
+            미리보기 (저장 안 됨)
+          </span>
         )}
+      </div>
 
-        <div className="grid grid-cols-4 gap-2 text-center">
-          <div className="bg-background border rounded p-2">
-            <p className="text-xs text-muted-foreground">빈 시간 합</p>
-            <p className="font-semibold">{formatDuration(result.stats.totalFreeMinutes)}</p>
-          </div>
-          <div className="bg-background border rounded p-2">
-            <p className="text-xs text-muted-foreground">작업 예산</p>
-            <p className="font-semibold">{formatDuration(result.stats.budgetMinutes)}</p>
-          </div>
-          <div className="bg-background border rounded p-2 border-primary/30">
-            <p className="text-xs text-muted-foreground">총 배정 시간</p>
-            <p className="font-semibold text-primary">{formatDuration(result.stats.allocatedMinutes)}</p>
-          </div>
-          <div className="bg-background border rounded p-2">
-            <p className="text-xs text-muted-foreground">남은 여유 시간</p>
-            <p className="font-semibold text-green-600">{formatDuration(result.stats.slackMinutes)}</p>
-          </div>
+      {result.warnings.length > 0 && (
+        <div className="mb-3 space-y-1">
+          {result.warnings.map((w, idx) => (
+            <div key={idx} className="flex gap-1.5 text-xs text-[var(--status-error)]">
+              <span className="font-bold flex-shrink-0">!</span>
+              <span>{w.message}</span>
+            </div>
+          ))}
         </div>
-      </CardContent>
-    </Card>
+      )}
+
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
+        <span className="text-muted-foreground">
+          총 배정 시간 <span className="font-medium text-foreground tabular-nums">{formatDuration(result.stats.allocatedMinutes)}</span>
+        </span>
+        <span className="text-muted-foreground">·</span>
+        <span className="text-muted-foreground">
+          작업 예산 <span className="tabular-nums">{formatDuration(result.stats.budgetMinutes)}</span>
+        </span>
+        <span className="text-muted-foreground">·</span>
+        <span className="text-muted-foreground">
+          남은 여유 <span className="tabular-nums">{formatDuration(result.stats.slackMinutes)}</span>
+        </span>
+      </div>
+    </div>
   );
 }

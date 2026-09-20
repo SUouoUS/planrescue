@@ -27,7 +27,7 @@ export default function Home() {
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
 
   if (!isLoaded) {
-    return <div className="p-8 text-center text-muted-foreground">데이터 불러오는 중...</div>;
+    return <div className="p-8 text-center text-muted-foreground text-sm">데이터 불러오는 중...</div>;
   }
 
   const activeTasks = tasks.filter(t => t.status === 'incomplete');
@@ -53,8 +53,6 @@ export default function Home() {
     await handleSaveTask(updated);
   };
 
-
-
   const handleOverrideChange = (taskId: string, override: UserOverride) => {
     if (!dayInput) return;
     const nextOverrides = { ...dayInput.userOverrides, [taskId]: override };
@@ -62,133 +60,158 @@ export default function Home() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-8 min-h-screen">
-      <header className="mb-8 flex justify-between items-end border-b pb-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">PlanRescue</h1>
-          <p className="text-muted-foreground mt-1">틀어진 계획을 남은 시간에 맞게 재조정하세요.</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-medium">{formatKoreanDate()}</p>
+    <div className="max-w-[1180px] mx-auto px-4 md:px-6 lg:px-8 xl:px-10 py-6 min-h-screen">
+      {/* Header */}
+      <header className="mb-10 flex flex-wrap justify-between items-center gap-4 border-b border-transparent">
+        <h1 className="text-[18px] font-bold tracking-tight text-foreground">PlanRescue</h1>
+        <div className="text-sm font-medium text-muted-foreground tabular-nums">
+          {formatKoreanDate()}
         </div>
       </header>
 
       {dayInput && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Left Column: Input and Tasks (col-span-7) */}
-          <div className="lg:col-span-7 space-y-6">
-            <DaySettingsPanel dayInput={dayInput} onChange={handleUpdateDayInput} />
-            
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">오늘 할 일</h2>
-              <Button onClick={() => { setEditingTask(undefined); setShowTaskForm(true); }}>
-                + 할 일 추가
-              </Button>
+        <>
+          {/* Page Title & Action */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-6 border-b border-border">
+            <div>
+              <h2 className="text-[26px] font-semibold text-foreground mb-2">오늘의 계획</h2>
+              <p className="text-sm text-muted-foreground">남은 시간에 맞춰 오늘 할 일을 정리해요.</p>
             </div>
-
-            {showTaskForm && (
-              <TaskForm 
-                initialTask={editingTask}
-                onSave={(t) => { handleSaveTask(t); setShowTaskForm(false); setEditingTask(undefined); }} 
-                onCancel={() => { setShowTaskForm(false); setEditingTask(undefined); }} 
-              />
-            )}
-
-            <div className="space-y-3">
-              {selectedTasks.length === 0 && !showTaskForm && (
-                <div className="p-8 text-center bg-slate-50 border rounded-lg border-dashed">
-                  <p className="text-muted-foreground mb-4">오늘 진행할 할 일이 없습니다.</p>
-                  <Button variant="outline" onClick={() => setShowTaskForm(true)}>할 일 추가하기</Button>
-                </div>
-              )}
-              
-              {selectedTasks.map(task => {
-                const decision = planResult?.decisions.find(d => d.taskId === task.id);
-                const isMustToday = dayInput.mustTodayTaskIds.includes(task.id);
-                const userOverride = dayInput.userOverrides[task.id] || 'AUTO';
-
-                // Skip showing in this list if it was postponed/dropped in the plan result, 
-                // it will show in the "Postponed" section below.
-                if (planResult && (decision?.action === 'POSTPONE' || decision?.action === 'DROP' || decision?.action === null)) {
-                  return null;
-                }
-
-                return (
-                  <TaskCard 
-                    key={task.id} 
-                    task={task} 
-                    decision={decision}
-                    userOverride={userOverride}
-                    isMustToday={isMustToday}
-                    onOverrideChange={(val) => handleOverrideChange(task.id, val)}
-                    onEdit={() => handleEditClick(task)}
-                    onComplete={() => handleTaskComplete(task)}
-                  />
-                );
-              })}
-            </div>
-
-            {unplacedTasks.length > 0 && (
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold text-muted-foreground mb-3 border-t pt-6">미뤄지거나 제외된 할 일</h3>
-                <div className="space-y-3 opacity-75">
-                  {unplacedTasks.map(task => {
-                    const decision = planResult?.decisions.find(d => d.taskId === task.id);
-                    const isMustToday = dayInput.mustTodayTaskIds.includes(task.id);
-                    const userOverride = dayInput.userOverrides[task.id] || 'AUTO';
-                    return (
-                      <TaskCard 
-                        key={task.id} 
-                        task={task} 
-                        decision={decision}
-                        userOverride={userOverride}
-                        isMustToday={isMustToday}
-                        onOverrideChange={(val) => handleOverrideChange(task.id, val)}
-                        onEdit={() => handleEditClick(task)}
-                        onComplete={() => handleTaskComplete(task)}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column: Rescue Action and Timeline (col-span-5) */}
-          <div className="lg:col-span-5 space-y-6">
-            <div className="sticky top-6 space-y-6">
-              
+            <div className="w-full md:w-auto md:min-w-[180px]">
               <Button 
-                size="lg" 
-                className="w-full text-lg h-14 shadow-md hover:shadow-lg transition-all"
+                className="w-full h-11 text-[15px]"
                 onClick={handleGeneratePlan}
               >
-                오늘 계획 복구하기
+                계획 복구하기
               </Button>
-              
-              <PlanResultPanel result={planResult} />
-              
-              {planResult && planResult.isPreview && (
-                <div className="flex gap-2">
-                  <Button className="flex-1" variant="default" onClick={handleApplyPlan}>
-                    이 계획 적용
-                  </Button>
-                </div>
-              )}
-
-              {planResult && (
-                <Timeline 
-                  planStartAt={dayInput.startAt}
-                  planEndAt={dayInput.endAt}
-                  blocks={planResult.scheduleBlocks}
-                  fixedSchedules={dayInput.fixedSchedules}
-                  getTaskTitle={getTaskTitle}
-                />
-              )}
             </div>
           </div>
-        </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.38fr)_minmax(320px,1fr)] gap-x-8 lg:gap-x-12 gap-y-10 items-start">
+            
+            {/* Main Area: Mobile puts DaySettings first, then tasks. Desktop puts tasks left, settings right. 
+                Wait, the prompt says: "모바일에서는 시간 설정 → 할 일·결과 → 시간표 순으로 보여주세요."
+                Desktop: Left: Tasks, Right: DaySettings & Timeline. */}
+            
+            {/* Left Column: Tasks */}
+            <div className="order-2 xl:order-1 space-y-6">
+              
+              <div className="flex justify-between items-center pb-2 border-b border-border">
+                <h2 className="text-base font-semibold text-foreground">오늘 할 일</h2>
+                <button 
+                  onClick={() => { setEditingTask(undefined); setShowTaskForm(true); }}
+                  className="text-sm text-accent hover:text-foreground transition-colors duration-150"
+                >
+                  + 추가
+                </button>
+              </div>
+
+              {showTaskForm && (
+                <TaskForm 
+                  initialTask={editingTask}
+                  onSave={(t) => { handleSaveTask(t); setShowTaskForm(false); setEditingTask(undefined); }} 
+                  onCancel={() => { setShowTaskForm(false); setEditingTask(undefined); }} 
+                />
+              )}
+
+              <div className="flex flex-col gap-0">
+                {selectedTasks.length === 0 && !showTaskForm && (
+                  <div className="py-10 text-center flex flex-col items-center">
+                    <p className="text-[15px] font-medium text-foreground mb-1">오늘 할 일을 하나 적어볼까요?</p>
+                    <p className="text-sm text-muted-foreground mb-5">예상 시간을 함께 적으면 남은 시간에 맞춰 정리할 수 있어요.</p>
+                    <Button variant="outline" size="sm" className="h-9" onClick={() => setShowTaskForm(true)}>할 일 추가하기</Button>
+                  </div>
+                )}
+                
+                {selectedTasks.map(task => {
+                  const decision = planResult?.decisions.find(d => d.taskId === task.id);
+                  const isMustToday = dayInput.mustTodayTaskIds.includes(task.id);
+                  const userOverride = dayInput.userOverrides[task.id] || 'AUTO';
+
+                  if (planResult && (decision?.action === 'POSTPONE' || decision?.action === 'DROP' || decision?.action === null)) {
+                    return null;
+                  }
+
+                  return (
+                    <TaskCard 
+                      key={task.id} 
+                      task={task} 
+                      decision={decision}
+                      userOverride={userOverride}
+                      isMustToday={isMustToday}
+                      onOverrideChange={(val) => handleOverrideChange(task.id, val)}
+                      onEdit={() => handleEditClick(task)}
+                      onComplete={() => handleTaskComplete(task)}
+                    />
+                  );
+                })}
+              </div>
+
+              {unplacedTasks.length > 0 && (
+                <div className="mt-12">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-4 pb-2 border-b border-border">
+                    미뤄지거나 제외된 할 일
+                  </h3>
+                  <div className="flex flex-col gap-0 opacity-80">
+                    {unplacedTasks.map(task => {
+                      const decision = planResult?.decisions.find(d => d.taskId === task.id);
+                      const isMustToday = dayInput.mustTodayTaskIds.includes(task.id);
+                      const userOverride = dayInput.userOverrides[task.id] || 'AUTO';
+                      return (
+                        <TaskCard 
+                          key={task.id} 
+                          task={task} 
+                          decision={decision}
+                          userOverride={userOverride}
+                          isMustToday={isMustToday}
+                          onOverrideChange={(val) => handleOverrideChange(task.id, val)}
+                          onEdit={() => handleEditClick(task)}
+                          onComplete={() => handleTaskComplete(task)}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Day Settings, Results, Timeline */}
+            <div className="order-1 xl:order-2 space-y-8">
+              
+              <DaySettingsPanel dayInput={dayInput} onChange={handleUpdateDayInput} />
+              
+              <div className="pt-2">
+                <PlanResultPanel result={planResult} />
+                
+                {planResult && planResult.isPreview && (
+                  <div className="mb-6">
+                    <Button className="w-full h-10" variant="secondary" onClick={handleApplyPlan}>
+                      이 계획 적용
+                    </Button>
+                  </div>
+                )}
+
+                <div className="mt-6">
+                  <h3 className="text-base font-semibold text-foreground mb-4 pb-2 border-b border-border">
+                    실행 시간표
+                  </h3>
+                  {planResult ? (
+                    <Timeline 
+                      planStartAt={dayInput.startAt}
+                      planEndAt={dayInput.endAt}
+                      blocks={planResult.scheduleBlocks}
+                      fixedSchedules={dayInput.fixedSchedules}
+                      getTaskTitle={getTaskTitle}
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-4">계획을 복구하면 이곳에 시간표가 표시돼요.</p>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
